@@ -60,7 +60,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('Assetlocation'), '/NestedTemplates/networkfase1.json')]",
+                    "uri": "[concat(parameters('Assetlocation'), '/nestedtemplates/networkfase1.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
