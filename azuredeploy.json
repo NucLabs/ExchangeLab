@@ -1,0 +1,84 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageAccountType": {
+            "type": "string",
+            "allowedValues": [
+                "Standard_LRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "The type of the Storage Account created"
+            },
+            "defaultValue": "Premium_LRS"
+        },
+        "storageNamePrefix": {
+            "type": "string",
+            "maxLength": 11,
+            "defaultValue": "storage",
+            "metadata": {
+                "description": "The value to use for starting the storage account name."
+            }
+        },
+        "Assetlocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Location of things needed"
+            },
+            "defaultValue": "https://raw.githubusercontent.com/NucLabs/ExchangeLab/master"
+        }
+    },
+    "variables": {
+        "storageName": "[concat(parameters('storageNamePrefix'), uniqueString(resourceGroup().id))]",
+        "networkname": "VNet",
+        "networkaddressrange": "10.0.0.0/16",
+        "subnetname": "Subnet1",
+        "subnet1addressrange": "10.0.0.0/24"
+
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageName')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[variables('storageName')]"
+            },
+            "properties": {
+                "accountType": "[parameters('storageAccountType')]"
+            }
+        },
+        {
+            "name": "networkfase1",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "tags": {
+                "displayName": "networkfase1"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('Assetlocation'), '/NestedTemplates/networkfase1.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkname": {
+                        "value":"[variables('networkname')]"
+                    },
+                    "networkaddressrange":{
+                        "value":"[variables('networkaddressrange')]"
+                    },
+                    "subnetname": {
+                        "value":"[variables('subnetname')]"
+                    },
+                    "subnetaddressrange":{
+                        "value": "[variables('subnet1addressrange')]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
