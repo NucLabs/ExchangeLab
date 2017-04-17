@@ -35,7 +35,6 @@
         "networkaddressrange": "10.0.0.0/16",
         "subnetname": "Subnet1",
         "subnet1addressrange": "10.0.0.0/24"
-
     },
     "resources": [
         {
@@ -62,18 +61,44 @@
                 },
                 "parameters": {
                     "networkname": {
-                        "value":"[variables('networkname')]"
+                        "value": "[variables('networkname')]"
                     },
-                    "networkaddressrange":{
-                        "value":"[variables('networkaddressrange')]"
+                    "networkaddressrange": {
+                        "value": "[variables('networkaddressrange')]"
                     },
                     "subnetname": {
-                        "value":"[variables('subnetname')]"
+                        "value": "[variables('subnetname')]"
                     },
-                    "subnetaddressrange":{
+                    "subnetaddressrange": {
                         "value": "[variables('subnet1addressrange')]"
                     }
                 }
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "WindowsVM1-NetworkInterface",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments','networkfase1')]"
+            ],
+            "tags": {
+                "displayName": "DC Network Interface"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "10.0.0.4",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('networkname'), '/subnets/', variables('subnetname')))]"
+                            }
+                        }
+                    }
+                ]
             }
         }
     ],
