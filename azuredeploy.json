@@ -54,9 +54,6 @@
             "name": "networkfase1",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2015-01-01",
-            "tags": {
-                "displayName": "networkfase1"
-            },
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
