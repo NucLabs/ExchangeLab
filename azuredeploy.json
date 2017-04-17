@@ -37,7 +37,7 @@
         "subnetname": "Subnet1",
         "subnet1addressrange": "10.0.0.0/24",
         "networkreference": "[resourceId('Microsoft.Network/virtualNetworks', variables('networkname'))]",
-        "subnet1reference": "[concat(variables('networkreference'),'subnets',variables('subnetname'))]"
+        "subnet1reference": "[concat(variables('networkreference'),'/subnets/',variables('subnetname'))]"
     },
     "resources": [
         {
