@@ -30,11 +30,14 @@
         }
     },
     "variables": {
+        "DCname": "ADDC",
         "storageName": "[concat(parameters('storageNamePrefix'), uniqueString(resourceGroup().id))]",
         "networkname": "VNet",
         "networkaddressrange": "10.0.0.0/16",
         "subnetname": "Subnet1",
-        "subnet1addressrange": "10.0.0.0/24"
+        "subnet1addressrange": "10.0.0.0/24",
+        "networkreference": "[resourceId('Microsoft.Network/virtualNetworks', variables('networkname'))]",
+        "subnet1reference": "[concat(variables('networkreference'),'subnets',variables('subnetname'))]"
     },
     "resources": [
         {
@@ -78,13 +81,13 @@
         {
             "apiVersion": "2015-06-15",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "WindowsVM1-NetworkInterface",
+            "name": "[concat(variables('DCname'),'NWInterface')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/deployments','networkfase1')]"
             ],
             "tags": {
-                "displayName": "DC Network Interface"
+                "displayName": "ADDC Network Interface"
             },
             "properties": {
                 "ipConfigurations": [
@@ -94,7 +97,7 @@
                             "privateIPAllocationMethod": "Static",
                             "privateIPAddress": "10.0.0.4",
                             "subnet": {
-                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('networkname'), '/subnets/', variables('subnetname')))]"
+                                "id": "[variables('subnet1reference')]"
                             }
                         }
                     }
