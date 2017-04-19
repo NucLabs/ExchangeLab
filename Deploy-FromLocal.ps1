@@ -9,7 +9,8 @@ if ((Get-AzureRmResourceGroup $ResourceGroupName -ErrorAction SilentlyContinue).
 New-AzureRmResourceGroupDeployment -Name ((Get-ChildItem $TemplateFile).BaseName + '-' + ((Get-Date).ToUniversalTime()).ToString('MMdd-HHmm')) `
                                    -ResourceGroupName $ResourceGroupName `
                                    -TemplateFile $TemplateFile `
+                                   -TemplateParameterFile $TemplateParametersFile `
                                    -Force -Verbose -Mode Incremental
-                                   #-TemplateParameterFile $TemplateParametersFile `
+                                   
 popd
 

@@ -7,18 +7,6 @@
     },
     "adminPassword": {
       "value": "Pass@Word123456"
-    },
-    "adVMSize": {
-      "value": "Standard_DS1_v2"
-    },
-    "dnsPrefix": {
-      "value": "balbal"
-    },
-    "publicIPAddressName": {
-      "value": "myPubIp"
-    },
-    "domainName": {
-      "value": "mydomain.local"
     }
   }
 }
