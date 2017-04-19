@@ -104,7 +104,7 @@
                 ]
             }
         },
-        {   ### De VM moet nog van de juiste var en params worden voorzien
+        {
             "apiVersion": "2015-06-15",
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('DCname')]",
