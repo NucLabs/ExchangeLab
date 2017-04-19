@@ -103,6 +103,87 @@
                     }
                 ]
             }
+        },
+        {   ### De VM moet nog van de juiste var en params worden voorzien
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('DCname')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/',variables('storageName'))]",
+                "Microsoft.Network/networkInterfaces/WindowsVM1-NetworkInterface"
+            ],
+            "tags": {
+                "displayName": "[variables('DCname')]"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_A2"
+                },
+                "osProfile": {
+                    "computerName": "[variables('DCname')]",
+                    "adminUsername": "ADMIN_USERNAME",
+                    "adminPassword": "ADMIN_PASSWORD"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('DCname'),'OSDisk')]",
+                        "vhd": {
+                            "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/DC-OSDisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('DCname'),'NWInterface'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[concat('http://', variables('storageName'), '.blob.core.windows.net')]"
+                    }
+                }
+            },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "WindowsVM1AzureDiagnostics",
+                    "apiVersion": "2015-06-15",
+                    "location": "[resourceGroup().location]",
+                    "tags": {
+                        "displayName": "WindowsVM1AzureDiagnostics"
+                    },
+                    "dependsOn": [
+                        "Microsoft.Compute/virtualMachines/WindowsVM1"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Azure.Diagnostics",
+                        "type": "IaaSDiagnostics",
+                        "typeHandlerVersion": "1.5",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "xmlCfg": "[base64('<WadCfg> <DiagnosticMonitorConfiguration overallQuotaInMB=\"4096\" xmlns=\"http: //schemas.microsoft.com/ServiceHosting/2010/10/DiagnosticsConfiguration\"> <DiagnosticInfrastructureLogs scheduledTransferLogLevelFilter=\"Error\"/> <Logs scheduledTransferPeriod=\"PT1M\" scheduledTransferLogLevelFilter=\"Error\" /> <Directories scheduledTransferPeriod=\"PT1M\"> <IISLogs containerName =\"wad-iis-logfiles\" /> <FailedRequestLogs containerName =\"wad-failedrequestlogs\" /> </Directories> <WindowsEventLog scheduledTransferPeriod=\"PT1M\" > <DataSource name=\"Application!*\" /> </WindowsEventLog> <CrashDumps containerName=\"wad-crashdumps\" dumpType=\"Mini\"> <CrashDumpConfiguration processName=\"WaIISHost.exe\"/> <CrashDumpConfiguration processName=\"WaWorkerHost.exe\"/> <CrashDumpConfiguration processName=\"w3wp.exe\"/> </CrashDumps> <PerformanceCounters scheduledTransferPeriod=\"PT1M\"> <PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\Available MBytes\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\Web Service(_Total)\\ISAPI Extension Requests/sec\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\Web Service(_Total)\\Bytes Total/Sec\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\ASP.NET Applications(__Total__)\\Requests/Sec\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\ASP.NET Applications(__Total__)\\Errors Total/Sec\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\ASP.NET\\Requests Queued\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\ASP.NET\\Requests Rejected\" sampleRate=\"PT3M\" /> <PerformanceCounterConfiguration counterSpecifier=\"\\Processor(_Total)\\% Processor Time\" sampleRate=\"PT3M\" /> </PerformanceCounters> </DiagnosticMonitorConfiguration> </WadCfg>')]",
+                            "storageAccount": "[toLower('WindowsVM1storage')]"
+                        },
+                        "protectedSettings": {
+                            "storageAccountName": "[toLower('WindowsVM1storage')]",
+                            "storageAccountKey": "[listkeys(concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Storage/storageAccounts/', toLower('WindowsVM1storage')), '2015-06-15').key1]",
+                            "storageAccountEndPoint": "https://core.windows.net"
+                        }
+                    }
+                }
+            ]
         }
     ],
     "outputs": {}
