@@ -56,44 +56,10 @@
         "subnetname": "Subnet1",
         "subnet1addressrange": "10.0.0.0/24",
         "networkreference": "[resourceId('Microsoft.Network/virtualNetworks', variables('networkname'))]",
-        "subnet1reference": "[concat(variables('networkreference'),'/subnets/',variables('subnetname'))]"
+        "subnet1reference": "[concat(variables('networkreference'),'/subnets/',variables('subnetname'))]",
+        "DCIPAddress": "10.0.0.4"
     },
     "resources": [
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(variables('DCname'),'CreateDomain')]",
-            "apiVersion": "2015-06-15",
-            "location": "[resourceGroup().location]",
-            "tags": {
-                "displayName": "[concat(variables('DCname'),'CreateDomain')]"
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/',variables('DCname')) ]"
-            ],
-            "properties": {
-                "publisher": "Microsoft.Powershell",
-                "type": "DSC",
-                "typeHandlerVersion": "2.9",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "modulesUrl": "[concat(parameters('Assetlocation'), '/DSC/CreateADPDC.zip')]",
-                    "configurationFunction": "CreateADPDC",
-                    "properties": {
-                        "nodeName": "[variables('DCname')]",
-                        "DomainName": "[parameters('domainName')]",
-                        "AdminCreds": {
-                            "UserName": "[parameters('adminUserName')]",
-                            "Password": "PrivateSettingsRef:AdminPassword"
-                        }
-                    }
-                },
-                "protectedSettings": {
-                    "Items": {
-                        "AdminPassword": "[parameters('adminPassword')]"
-                    }
-                }
-            }
-        },
         {
             "type": "Microsoft.Storage/storageAccounts",
             "name": "[variables('storageName')]",
@@ -133,12 +99,42 @@
             }
         },
         {
+            "name": "networkfase2",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('Assetlocation'), '/nestedtemplates/networkfase2.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "networkname": {
+                        "value": "[variables('networkname')]"
+                    },
+                    "networkaddressrange": {
+                        "value": "[variables('networkaddressrange')]"
+                    },
+                    "subnetname": {
+                        "value": "[variables('subnetname')]"
+                    },
+                    "subnetaddressrange": {
+                        "value": "[variables('subnet1addressrange')]"
+                    },
+                    "DNSServerAddress": {
+                        "value": "[variables('DCIPAddress')]"
+                    }
+                }
+            }
+        },
+        {
             "apiVersion": "2015-06-15",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(variables('DCname'),'NWInterface')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/deployments','networkfase1')]"
+                "[resourceId('Microsoft.Resources/deployments','networkfase1')]",
+                "[resourceId('Microsoft.Network/loadBalancers','LoadBalancer')]"
             ],
             "tags": {
                 "displayName": "ADDC Network Interface"
@@ -149,14 +145,71 @@
                         "name": "ipconfig1",
                         "properties": {
                             "privateIPAllocationMethod": "Static",
-                            "privateIPAddress": "10.0.0.4",
+                            "privateIPAddress": "[variables('DCIPAddress')]",
                             "subnet": {
                                 "id": "[variables('subnet1reference')]"
-                            }
+                            },
+                            "loadBalancerInboundNatRules": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPDC')]"
+                                }
+                            ]
                         }
                     }
                 ]
             }
+        },
+        {
+            "comments": "Generalized from resource: '/subscriptions/b2f80073-23fc-4a64-bcff-c7ba4917314c/resourceGroups/ExLab/providers/Microsoft.Network/publicIPAddresses/PublicIP'.",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "PubIP",
+            "apiVersion": "2016-03-30",
+            "location": "westeurope",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "idleTimeoutInMinutes": 4
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "LoadBalancer",
+            "apiVersion": "2016-03-30",
+            "location": "westeurope",
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "LoadBalancerFrontEnd",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'PubIP')]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [],
+                "loadBalancingRules": [],
+                "probes": [],
+                "inboundNatRules": [
+                    {
+                        "name": "RDPDC",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceid('Microsoft.Network/loadBalancers','LoadBalancer'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+                            },
+                            "frontendPort": 3389,
+                            "backendPort": 3389,
+                            "protocol": "Tcp"
+                        }
+                    }
+                ],
+                "outboundNatRules": [],
+                "inboundNatPools": []
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'PubIP')]"
+            ]
         },
         {
             "apiVersion": "2015-06-15",
@@ -202,7 +255,43 @@
                         }
                     ]
                 }
-            }
+            },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "[concat(variables('DCname'),'CreateDomain')]",
+                    "apiVersion": "2015-06-15",
+                    "location": "[resourceGroup().location]",
+                    "tags": {
+                        "displayName": "[concat(variables('DCname'),'CreateDomain')]"
+                    },
+                    "dependsOn": [
+                        "[concat('Microsoft.Compute/virtualMachines/',variables('DCname')) ]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.9",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "modulesUrl": "[concat(parameters('Assetlocation'), '/DSC/CreateADPDC.ps1.zip')]",
+                            "configurationFunction": "CreateADPDC.ps1\\CreateADPDC",
+                            "properties": {
+                                "DomainName": "[parameters('domainName')]",
+                                "AdminCreds": {
+                                    "UserName": "[parameters('adminUserName')]",
+                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                }
+                            }
+                        },
+                        "protectedSettings": {
+                            "Items": {
+                                "AdminPassword": "[parameters('adminPassword')]"
+                            }
+                        }
+                    }
+                }
+            ]
         }
     ],
     "outputs": {}

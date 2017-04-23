@@ -14,3 +14,5 @@ New-AzureRmResourceGroupDeployment -Name ((Get-ChildItem $TemplateFile).BaseName
                                    
 popd
 
+#https://raw.githubusercontent.com/NucLabs/ExchangeLab/master/DSC/
+#https://raw.githubusercontent.com/NucLabs/ExchangeLab/master/DSC/CreateADPDC.ps

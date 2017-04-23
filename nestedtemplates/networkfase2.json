@@ -1,0 +1,52 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "networkname": {
+            "type": "string"
+        },
+        "networkaddressrange": {
+            "type": "string"
+        },
+        "subnetname": {
+            "type": "string"
+        },
+        "subnetaddressrange": {
+            "type": "string"
+        },
+        "DNSServerAddress": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('networkname')]",
+            "tags": {
+                "displayName": "[parameters('networkname')]"
+            },
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('networkaddressrange')]"
+                    ]
+                },
+                "dhcpOptions":{
+                    "dnsServers": [
+                        "[parameters('DNSServerAddress')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnetname')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetaddressrange')]"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
