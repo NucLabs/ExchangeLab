@@ -50,6 +50,8 @@
     },
     "variables": {
         "DCname": "ADDC",
+        "EX1name": "EX1",
+        "EX2name": "EX2",
         "storageName": "[concat(parameters('storageNamePrefix'), uniqueString(resourceGroup().id))]",
         "networkname": "VNet",
         "networkaddressrange": "10.0.0.0/16",
@@ -57,7 +59,9 @@
         "subnet1addressrange": "10.0.0.0/24",
         "networkreference": "[resourceId('Microsoft.Network/virtualNetworks', variables('networkname'))]",
         "subnet1reference": "[concat(variables('networkreference'),'/subnets/',variables('subnetname'))]",
-        "DCIPAddress": "10.0.0.4"
+        "DCIPAddress": "10.0.0.4",
+        "EX1IPAddress": "10.0.0.5",
+        "EX2IPAddress": "10.0.0.6"
     },
     "resources": [
         {
@@ -125,7 +129,10 @@
                         "value": "[variables('DCIPAddress')]"
                     }
                 }
-            }
+            },
+            "dependsOn": [
+                "[concat(variables('DCname'),'CreateDomain')]"
+            ]
         },
         {
             "apiVersion": "2015-06-15",
@@ -152,6 +159,70 @@
                             "loadBalancerInboundNatRules": [
                                 {
                                     "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPDC')]"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('EX1name'),'NWInterface')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments','networkfase2')]",
+                "[resourceId('Microsoft.Network/loadBalancers','LoadBalancer')]"
+            ],
+            "tags": {
+                "displayName": "Exchange 1 Network Interface"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('EX1IPAddress')]",
+                            "subnet": {
+                                "id": "[variables('subnet1reference')]"
+                            },
+                            "loadBalancerInboundNatRules": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPEX1')]"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('EX2name'),'NWInterface')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments','networkfase2')]",
+                "[resourceId('Microsoft.Network/loadBalancers','LoadBalancer')]"
+            ],
+            "tags": {
+                "displayName": "Exchange 2 Network Interface"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('EX2IPAddress')]",
+                            "subnet": {
+                                "id": "[variables('subnet1reference')]"
+                            },
+                            "loadBalancerInboundNatRules": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPEX2')]"
                                 }
                             ]
                         }
@@ -198,7 +269,29 @@
                             "frontendIPConfiguration": {
                                 "id": "[concat(resourceid('Microsoft.Network/loadBalancers','LoadBalancer'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]"
                             },
+                            "frontendPort": 33389,
+                            "backendPort": 3389,
+                            "protocol": "Tcp"
+                        }
+                    },
+                    {
+                        "name": "RDPEX1",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceid('Microsoft.Network/loadBalancers','LoadBalancer'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+                            },
                             "frontendPort": 3389,
+                            "backendPort": 3389,
+                            "protocol": "Tcp"
+                        }
+                    },
+                    {
+                        "name": "RDPEX2",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceid('Microsoft.Network/loadBalancers','LoadBalancer'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+                            },
+                            "frontendPort": 43389,
                             "backendPort": 3389,
                             "protocol": "Tcp"
                         }
@@ -218,12 +311,16 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[concat('Microsoft.Storage/storageAccounts/',variables('storageName'))]",
+                "[concat('Microsoft.Compute/availabilitySets/','AvailabilitySet')]",
                 "[concat('Microsoft.Network/networkInterfaces/',variables('DCname'),'NWInterface')]"
             ],
             "tags": {
                 "displayName": "[variables('DCname')]"
             },
             "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets','AvailabilitySet')]"
+                },
                 "hardwareProfile": {
                     "vmSize": "Standard_DS1_v2"
                 },
@@ -292,6 +389,98 @@
                     }
                 }
             ]
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('EX1name')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/',variables('storageName'))]",
+                "[concat('Microsoft.Network/networkInterfaces/',variables('EX1name'),'NWInterface')]",
+                "[concat('Microsoft.Resources/deployments/','networkfase2')]"
+            ],
+            "tags": {
+                "displayName": "[variables('EX1name')]"
+            },
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets','AvailabilitySet')]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "Standard_DS3_v2"
+                },
+                "osProfile": {
+                    "computerName": "[variables('EX1name')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('DCname'),'OSDisk')]",
+                        "vhd": {
+                            "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-OSDisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": [
+                        {
+                            "name": "Ex1DataDisk1",
+                            "diskSizeGB": "5",
+                            "caching": "ReadWrite",
+                            "lun": 1,
+                            "createOption": "Empty",
+                            "vhd": {
+                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk1.vhd')]"
+                            }
+                        },
+                        {
+                            "name": "Ex1DataDisk2",
+                            "diskSizeGB": "5",
+                            "caching": "ReadWrite",
+                            "lun": 2,
+                            "createOption": "Empty",
+                            "vhd": {
+                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk2.vhd')]"
+                            }
+                        },
+                        {
+                            "name": "Ex1DataDisk3",
+                            "diskSizeGB": "5",
+                            "caching": "ReadWrite",
+                            "lun": 2,
+                            "createOption": "Empty",
+                            "vhd": {
+                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk3.vhd')]"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('EX1name'),'NWInterface'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "AvailabilitySet",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "AvailabilitySet"
+            },
+            "properties": {}
         }
     ],
     "outputs": {}
