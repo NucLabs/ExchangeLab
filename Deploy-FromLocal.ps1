@@ -1,4 +1,4 @@
-pushd C:\Users\GertJanKraaijeveld\Source\Repos\ExchangeLab
+#pushd C:\Users\GertJanKraaijeveld\Source\Repos\ExchangeLab
 $ResourceGroupName = 'ExLab'
 $TemplateFile = 'azuredeploy.json'
 $TemplateParametersFile = 'azuredeploy.parameters.local.json'

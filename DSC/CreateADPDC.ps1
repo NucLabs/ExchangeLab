@@ -12,7 +12,7 @@
         [Int]$RetryIntervalSec=30
     )
 
-    Import-DscResource -ModuleName xActiveDirectory, xNetworking, PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xStorage, xSMBShare
+    Import-DscResource -ModuleName @{modulename="xActiveDirectory";RequiredVersion="2.18.0.0"}, xNetworking, @{modulename="xPSDesiredStateConfiguration";RequiredVersion="8.4.0.0"}, PSDesiredStateConfiguration, xStorage, xSMBShare
     [System.Management.Automation.PSCredential ]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     $Interface=Get-NetAdapter|Where Name -Like "Ethernet*"|Select-Object -First 1
     $InterfaceAlias=$($Interface.Name)
