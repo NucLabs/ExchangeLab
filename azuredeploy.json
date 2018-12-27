@@ -455,7 +455,7 @@
                             "name": "Ex1DataDisk3",
                             "diskSizeGB": "5",
                             "caching": "ReadWrite",
-                            "lun": 2,
+                            "lun": 3,
                             "createOption": "Empty",
                             "vhd": {
                                 "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk3.vhd')]"
