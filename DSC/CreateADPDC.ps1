@@ -28,7 +28,7 @@
         xRemoteFile ExchangeISO 
         {
             DestinationPath = 'c:\ISOPath\ExchangeServer2016-x64-cu4.iso'
-            Uri = 'https://download.microsoft.com/download/B/9/F/B9F59CF4-7C60-49EF-8A5B-8C2B7991FA86/ExchangeServer2016-x64-cu4.iso' #De echte
+            Uri = 'https://download.microsoft.com/download/6/6/F/66F70200-E2E8-4E73-88F9-A1F6E3E04650/ExchangeServer2016-x64-cu11.iso'
             #Uri = 'https://download.freebsd.org/ftp/releases/amd64/amd64/ISO-IMAGES/11.0/FreeBSD-11.0-RELEASE-amd64-bootonly.iso'  #test FreeBSD iso (veel kleiner...)
             DependsOn = "[File]Destination"
             MatchSource = $false
