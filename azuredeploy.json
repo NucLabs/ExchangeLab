@@ -50,18 +50,17 @@
     },
     "variables": {
         "DCname": "ADDC",
-        "EX1name": "EX1",
-        "EX2name": "EX2",
+        "NumberOfExchangeServers": 2,
+        "EXBaseName": "EX",
         "storageName": "[concat(parameters('storageNamePrefix'), uniqueString(resourceGroup().id))]",
         "networkname": "VNet",
         "networkaddressrange": "10.0.0.0/16",
         "subnetname": "Subnet1",
         "subnet1addressrange": "10.0.0.0/24",
+        "subnet1addressbase": "10.0.0.",
         "networkreference": "[resourceId('Microsoft.Network/virtualNetworks', variables('networkname'))]",
         "subnet1reference": "[concat(variables('networkreference'),'/subnets/',variables('subnetname'))]",
-        "DCIPAddress": "10.0.0.4",
-        "EX1IPAddress": "10.0.0.5",
-        "EX2IPAddress": "10.0.0.6"
+        "DCIPAddress": "10.0.0.4"
     },
     "resources": [
         {
@@ -169,14 +168,18 @@
         {
             "apiVersion": "2015-06-15",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(variables('EX1name'),'NWInterface')]",
+            "name": "[concat(variables('EXBaseName'),copyIndex(),'NWInterface')]",
             "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "NicLoop",
+                "count": "[variables('NumberOfExchangeServers')]"
+            },
             "dependsOn": [
                 "[resourceId('Microsoft.Resources/deployments','networkfase2')]",
                 "[resourceId('Microsoft.Network/loadBalancers','LoadBalancer')]"
             ],
             "tags": {
-                "displayName": "Exchange 1 Network Interface"
+                "displayName": "[concat('Exchange',copyIndex(),'Network Interface')]"
             },
             "properties": {
                 "ipConfigurations": [
@@ -184,45 +187,13 @@
                         "name": "ipconfig1",
                         "properties": {
                             "privateIPAllocationMethod": "Static",
-                            "privateIPAddress": "[variables('EX1IPAddress')]",
+                            "privateIPAddress": "[concat(variables('subnet1addressbase'),copyIndex(5))]",
                             "subnet": {
                                 "id": "[variables('subnet1reference')]"
                             },
                             "loadBalancerInboundNatRules": [
                                 {
-                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPEX1')]"
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "apiVersion": "2015-06-15",
-            "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(variables('EX2name'),'NWInterface')]",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Resources/deployments','networkfase2')]",
-                "[resourceId('Microsoft.Network/loadBalancers','LoadBalancer')]"
-            ],
-            "tags": {
-                "displayName": "Exchange 2 Network Interface"
-            },
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "privateIPAllocationMethod": "Static",
-                            "privateIPAddress": "[variables('EX2IPAddress')]",
-                            "subnet": {
-                                "id": "[variables('subnet1reference')]"
-                            },
-                            "loadBalancerInboundNatRules": [
-                                {
-                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPEX2')]"
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', 'LoadBalancer'), '/inboundNatRules/RDPEX',copyIndex())]"
                                 }
                             ]
                         }
@@ -393,15 +364,19 @@
         {
             "apiVersion": "2015-06-15",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[variables('EX1name')]",
+            "name": "[concat(variables('EXBaseName'),copyIndex())]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[concat('Microsoft.Storage/storageAccounts/',variables('storageName'))]",
-                "[concat('Microsoft.Network/networkInterfaces/',variables('EX1name'),'NWInterface')]",
+                "NicLoop",
                 "[concat('Microsoft.Resources/deployments/','networkfase2')]"
             ],
+            "copy": {
+                "name": "ExLoop",
+                "count": "[variables('NumberOfExchangeServers')]"
+            },
             "tags": {
-                "displayName": "[variables('EX1name')]"
+                "displayName": "[concat(variables('EXBaseName'),copyIndex())]"
             },
             "properties": {
                 "availabilitySet": {
@@ -411,7 +386,7 @@
                     "vmSize": "Standard_DS3_v2"
                 },
                 "osProfile": {
-                    "computerName": "[variables('EX1name')]",
+                    "computerName": "[concat(variables('EXBaseName'),copyIndex())]",
                     "adminUsername": "[parameters('adminUsername')]",
                     "adminPassword": "[parameters('adminPassword')]"
                 },
@@ -423,42 +398,42 @@
                         "version": "latest"
                     },
                     "osDisk": {
-                        "name": "[concat(variables('DCname'),'OSDisk')]",
+                        "name": "[concat(variables('EXBaseName'),copyIndex(),'OSDisk')]",
                         "vhd": {
-                            "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-OSDisk.vhd')]"
+                            "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/',variables('EXBaseName'),copyIndex(),'.vhd')]"
                         },
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
                     },
                     "dataDisks": [
                         {
-                            "name": "Ex1DataDisk1",
+                            "name": "[concat('Ex',copyIndex(),'DataDisk1')]",
                             "diskSizeGB": "5",
                             "caching": "ReadWrite",
                             "lun": 1,
                             "createOption": "Empty",
                             "vhd": {
-                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk1.vhd')]"
+                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX',copyIndex(),'-DataDisk1.vhd')]"
                             }
                         },
                         {
-                            "name": "Ex1DataDisk2",
+                            "name": "[concat('Ex',copyIndex(),'DataDisk2')]",
                             "diskSizeGB": "5",
                             "caching": "ReadWrite",
                             "lun": 2,
                             "createOption": "Empty",
                             "vhd": {
-                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk2.vhd')]"
+                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX',copyIndex(),'-DataDisk2.vhd')]"
                             }
                         },
                         {
-                            "name": "Ex1DataDisk3",
+                            "name": "[concat('Ex',copyIndex(),'DataDisk3')]",
                             "diskSizeGB": "5",
                             "caching": "ReadWrite",
                             "lun": 3,
                             "createOption": "Empty",
                             "vhd": {
-                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX1-DataDisk3.vhd')]"
+                                "uri": "[concat('http://', variables('storageName'), '.blob.core.windows.net/vhds/EX',copyIndex(),'-DataDisk3.vhd')]"
                             }
                         }
                     ]
@@ -466,7 +441,7 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('EX1name'),'NWInterface'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('EXBaseName'),copyIndex(),'NWInterface'))]"
                         }
                     ]
                 }
